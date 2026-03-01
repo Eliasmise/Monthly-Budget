@@ -5,6 +5,7 @@ import { subDays } from "date-fns";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { apiJson } from "@/lib/client-api";
 import { expensesToCsv } from "@/lib/csv";
 import { formatMoney } from "@/lib/utils";
-import type { Category, Currency, Expense } from "@/lib/types";
+import type { Category, Currency, Expense, UserBudgetConfig } from "@/lib/types";
 
 interface ReviewTabProps {
   categories: Category[];
@@ -31,6 +32,15 @@ interface EditState {
   amount: string;
   expenseDate: string;
   currency: Currency;
+}
+
+interface BudgetRow {
+  categoryId: string;
+  categoryName: string;
+  percent: number;
+  allocated: number;
+  spent: number;
+  remaining: number;
 }
 
 function defaultStartDate() {
@@ -74,6 +84,8 @@ export function ReviewTab({ categories, refreshSignal, role, onDataChanged }: Re
   const [editing, setEditing] = useState<EditState | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [budgetConfig, setBudgetConfig] = useState<UserBudgetConfig | null>(null);
+  const [budgetLoading, setBudgetLoading] = useState(false);
 
   const filters = useMemo(
     () => ({ startDate, endDate, categoryId, currency, search, sortBy, sortDir }),
@@ -97,6 +109,25 @@ export function ReviewTab({ categories, refreshSignal, role, onDataChanged }: Re
   useEffect(() => {
     void loadExpenses();
   }, [refreshSignal, loadExpenses]);
+
+  const loadBudget = useCallback(async () => {
+    if (role === "admin") return;
+
+    setBudgetLoading(true);
+    try {
+      const response = await apiJson<{ budget: UserBudgetConfig }>("/api/budget");
+      setBudgetConfig(response.budget);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to load budget setup";
+      toast.error(message);
+    } finally {
+      setBudgetLoading(false);
+    }
+  }, [role]);
+
+  useEffect(() => {
+    void loadBudget();
+  }, [loadBudget, refreshSignal]);
 
   function onExportCsv() {
     if (expenses.length === 0) {
@@ -156,6 +187,36 @@ export function ReviewTab({ categories, refreshSignal, role, onDataChanged }: Re
   }
 
   const activeCategories = useMemo(() => categories.filter((category) => category.is_active), [categories]);
+
+  const budgetRows = useMemo<BudgetRow[]>(() => {
+    if (!budgetConfig) return [];
+
+    return budgetConfig.allocations
+      .map((allocation) => {
+        const spent = expenses
+          .filter(
+            (expense) => expense.category_id === allocation.category_id && expense.currency === budgetConfig.salary_currency
+          )
+          .reduce((sum, expense) => sum + Number(expense.amount), 0);
+
+        const allocated = (budgetConfig.salary_amount * allocation.allocation_percent) / 100;
+        return {
+          categoryId: allocation.category_id,
+          categoryName: allocation.category_name,
+          percent: allocation.allocation_percent,
+          allocated,
+          spent,
+          remaining: allocated - spent
+        };
+      })
+      .sort((a, b) => a.categoryName.localeCompare(b.categoryName));
+  }, [budgetConfig, expenses]);
+
+  const totalBudgetAllocated = useMemo(
+    () => budgetRows.reduce((sum, row) => sum + row.allocated, 0),
+    [budgetRows]
+  );
+  const totalBudgetSpent = useMemo(() => budgetRows.reduce((sum, row) => sum + row.spent, 0), [budgetRows]);
 
   return (
     <div className="space-y-4">
@@ -242,6 +303,76 @@ export function ReviewTab({ categories, refreshSignal, role, onDataChanged }: Re
           {role === "admin" ? <span className="text-xs text-muted-foreground">Admin view includes all users</span> : null}
         </div>
       </div>
+
+      {role === "user" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Category Budget Left</CardTitle>
+            <CardDescription>
+              Based on your salary setup and current review filters ({startDate} to {endDate}).
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {budgetLoading ? (
+              <p className="text-sm text-muted-foreground">Loading budget setup...</p>
+            ) : !budgetConfig ? (
+              <p className="text-sm text-muted-foreground">Budget configuration not found.</p>
+            ) : budgetConfig.allocations.length === 0 || budgetConfig.salary_amount <= 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Ask an admin to set your salary and category allocation percentages.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Salary</p>
+                    <p className="text-lg font-semibold">
+                      {formatMoney(budgetConfig.salary_amount, budgetConfig.salary_currency)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Allocated</p>
+                    <p className="text-lg font-semibold">
+                      {formatMoney(totalBudgetAllocated, budgetConfig.salary_currency)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border p-3">
+                    <p className="text-xs text-muted-foreground">Remaining</p>
+                    <p className="text-lg font-semibold">
+                      {formatMoney(totalBudgetAllocated - totalBudgetSpent, budgetConfig.salary_currency)}
+                    </p>
+                  </div>
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Category</TableHead>
+                      <TableHead>%</TableHead>
+                      <TableHead>Allocated</TableHead>
+                      <TableHead>Spent</TableHead>
+                      <TableHead>Left</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {budgetRows.map((row) => (
+                      <TableRow key={row.categoryId}>
+                        <TableCell>{row.categoryName}</TableCell>
+                        <TableCell>{row.percent.toFixed(2)}%</TableCell>
+                        <TableCell>{formatMoney(row.allocated, budgetConfig.salary_currency)}</TableCell>
+                        <TableCell>{formatMoney(row.spent, budgetConfig.salary_currency)}</TableCell>
+                        <TableCell className={row.remaining < 0 ? "text-destructive font-semibold" : ""}>
+                          {formatMoney(row.remaining, budgetConfig.salary_currency)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="rounded-lg border bg-card">
         <Table>

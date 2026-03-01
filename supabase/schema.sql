@@ -4,6 +4,8 @@ create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   username text unique not null,
   role text not null default 'user' check (role in ('admin', 'user')),
+  salary_amount numeric(12,2) not null default 0,
+  salary_currency text not null default 'HNL' check (salary_currency in ('HNL', 'USD')),
   created_at timestamptz not null default now()
 );
 
@@ -26,8 +28,19 @@ create table if not exists public.expenses (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.user_category_budgets (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references public.users(id) on delete cascade,
+  category_id uuid not null references public.categories(id) on delete cascade,
+  allocation_percent numeric(5,2) not null check (allocation_percent >= 0 and allocation_percent <= 100),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (user_id, category_id)
+);
+
 create index if not exists idx_expenses_user_date_desc on public.expenses (user_id, expense_date desc);
 create index if not exists idx_expenses_category_id on public.expenses (category_id);
+create index if not exists idx_user_category_budgets_user on public.user_category_budgets (user_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -42,6 +55,12 @@ $$;
 drop trigger if exists trg_expenses_updated_at on public.expenses;
 create trigger trg_expenses_updated_at
 before update on public.expenses
+for each row
+execute function public.set_updated_at();
+
+drop trigger if exists trg_user_category_budgets_updated_at on public.user_category_budgets;
+create trigger trg_user_category_budgets_updated_at
+before update on public.user_category_budgets
 for each row
 execute function public.set_updated_at();
 

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("users")
-    .select("id, username, role, created_at")
+    .select("id, username, role, salary_amount, salary_currency, created_at")
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       username: parsed.data.username,
       role: parsed.data.role
     })
-    .select("id, username, role, created_at")
+    .select("id, username, role, salary_amount, salary_currency, created_at")
     .single();
 
   if (error || !data) {

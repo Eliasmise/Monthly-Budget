@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .from("users")
     .update({ role: parsed.data.role })
     .eq("id", params.id)
-    .select("id, username, role, created_at")
+    .select("id, username, role, salary_amount, salary_currency, created_at")
     .single();
 
   if (error || !data) {

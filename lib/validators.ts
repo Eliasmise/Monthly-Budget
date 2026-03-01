@@ -31,3 +31,15 @@ export const userSchema = z.object({
 export const roleSchema = z.object({
   role: z.enum(["admin", "user"])
 });
+
+export const budgetAllocationSchema = z.object({
+  categoryId: z.string().uuid("Invalid category"),
+  allocationPercent: z.coerce.number().min(0, "Allocation cannot be negative").max(100, "Allocation cannot exceed 100")
+});
+
+export const updateUserBudgetSchema = z.object({
+  userId: z.string().uuid("Invalid user"),
+  salaryAmount: z.coerce.number().min(0, "Salary cannot be negative"),
+  salaryCurrency: z.enum(["HNL", "USD"]),
+  allocations: z.array(budgetAllocationSchema)
+});

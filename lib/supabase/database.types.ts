@@ -8,18 +8,24 @@ export interface Database {
           id: string;
           username: string;
           role: "admin" | "user";
+          salary_amount: number;
+          salary_currency: "HNL" | "USD";
           created_at: string;
         };
         Insert: {
           id?: string;
           username: string;
           role?: "admin" | "user";
+          salary_amount?: number;
+          salary_currency?: "HNL" | "USD";
           created_at?: string;
         };
         Update: {
           id?: string;
           username?: string;
           role?: "admin" | "user";
+          salary_amount?: number;
+          salary_currency?: "HNL" | "USD";
           created_at?: string;
         };
         Relationships: [];
@@ -89,6 +95,48 @@ export interface Database {
           },
           {
             foreignKeyName: "expenses_category_id_fkey";
+            columns: ["category_id"];
+            isOneToOne: false;
+            referencedRelation: "categories";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
+      user_category_budgets: {
+        Row: {
+          id: string;
+          user_id: string;
+          category_id: string;
+          allocation_percent: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          category_id: string;
+          allocation_percent: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          category_id?: string;
+          allocation_percent?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "user_category_budgets_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "user_category_budgets_category_id_fkey";
             columns: ["category_id"];
             isOneToOne: false;
             referencedRelation: "categories";

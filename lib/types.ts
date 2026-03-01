@@ -33,7 +33,24 @@ export interface AppUser {
   id: string;
   username: string;
   role: UserRole;
+  salary_amount: number;
+  salary_currency: Currency;
   created_at: string;
+}
+
+export interface BudgetAllocation {
+  category_id: string;
+  category_name: string;
+  allocation_percent: number;
+  is_active: boolean;
+}
+
+export interface UserBudgetConfig {
+  user_id: string;
+  username: string;
+  salary_amount: number;
+  salary_currency: Currency;
+  allocations: BudgetAllocation[];
 }
 
 export interface ExpenseFilters {

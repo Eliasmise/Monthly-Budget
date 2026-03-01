@@ -3,7 +3,7 @@
 Production-ready expense logging app with:
 - Username-only login
 - Expense entry/review/analytics tabs
-- Admin management of users and categories
+- Admin management of users, categories, and per-user budget allocations
 - Supabase as the only persistence layer
 
 ## Stack
@@ -33,6 +33,9 @@ Run SQL from:
 
 If you previously used the Sheets version, also run:
 - `/supabase/migrations/20260301183000_remove_google_sheets_columns.sql`
+
+For per-user salary/category budgeting, run:
+- `/supabase/migrations/20260301195000_add_user_budgeting.sql`
 
 Then run seed script (ensures admin username comes from env):
 ```bash
@@ -75,8 +78,11 @@ API routes:
 - `PATCH, DELETE /api/categories/:id`
 - `GET, POST /api/admin/users`
 - `PATCH, DELETE /api/admin/users/:id`
+- `GET, PUT /api/admin/budgets`
+- `GET /api/budget`
 
 ## Notes
 - Expense CRUD writes to Supabase only.
 - Users can only modify their own expenses; admins can access all users' expenses.
 - Categories are dynamic from the database.
+- Users can see remaining budget per category in Review based on admin-configured salary and percentages.
