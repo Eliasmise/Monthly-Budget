@@ -1,0 +1,33 @@
+import { z } from "zod";
+
+export const usernameSchema = z
+  .string()
+  .trim()
+  .min(2, "Username must have at least 2 characters")
+  .max(50, "Username is too long")
+  .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, _, -, .");
+
+export const createExpenseSchema = z.object({
+  description: z.string().trim().min(1, "Description is required").max(180),
+  categoryId: z.string().uuid("Invalid category"),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  currency: z.enum(["HNL", "USD"]),
+  expenseDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid expense date")
+});
+
+export const updateExpenseSchema = createExpenseSchema.partial().refine((value) => Object.keys(value).length > 0, {
+  message: "At least one field must be updated"
+});
+
+export const categorySchema = z.object({
+  name: z.string().trim().min(1).max(80)
+});
+
+export const userSchema = z.object({
+  username: usernameSchema,
+  role: z.enum(["admin", "user"]).default("user")
+});
+
+export const roleSchema = z.object({
+  role: z.enum(["admin", "user"])
+});
