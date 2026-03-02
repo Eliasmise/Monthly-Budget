@@ -22,6 +22,7 @@ export function AdminPanel() {
 
   const [newUsername, setNewUsername] = useState("");
   const [newRole, setNewRole] = useState<UserRole>("user");
+  const [newUserPassword, setNewUserPassword] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
 
   const [selectedBudgetUserId, setSelectedBudgetUserId] = useState("");
@@ -93,17 +94,13 @@ export function AdminPanel() {
         }
         return nextUserId;
       });
-
-      if (!selectedBudgetUserId && nextUserId) {
-        await loadBudgetForUser(nextUserId, categoriesResponse.categories);
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to load admin data";
       toast.error(message);
     } finally {
       setLoading(false);
     }
-  }, [selectedBudgetUserId, loadBudgetForUser]);
+  }, []);
 
   useEffect(() => {
     void loadAll();
@@ -120,10 +117,11 @@ export function AdminPanel() {
     try {
       const response = await apiJson<{ user: AppUser }>("/api/admin/users", {
         method: "POST",
-        body: JSON.stringify({ username: newUsername, role: newRole })
+        body: JSON.stringify({ username: newUsername, role: newRole, password: newUserPassword })
       });
       setNewUsername("");
       setNewRole("user");
+      setNewUserPassword("");
       toast.success("User created");
       await loadAll();
       setSelectedBudgetUserId(response.user.id);
@@ -158,6 +156,26 @@ export function AdminPanel() {
       await loadAll();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to delete user";
+      toast.error(message);
+    }
+  }
+
+  async function setUserPassword(user: AppUser) {
+    const password = window.prompt(`Set new password for ${user.username}:`);
+    if (password === null) return;
+    if (password.length === 0) {
+      toast.error("Password cannot be empty");
+      return;
+    }
+
+    try {
+      await apiJson<{ user: AppUser }>(`/api/admin/users/${user.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ password })
+      });
+      toast.success(`Password updated for ${user.username}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to update password";
       toast.error(message);
     }
   }
@@ -268,7 +286,7 @@ export function AdminPanel() {
               <CardDescription>Create, delete, and manage user roles.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <form className="grid gap-3 md:grid-cols-[1fr_160px_auto]" onSubmit={addUser}>
+              <form className="grid gap-3 md:grid-cols-[1fr_1fr_160px_auto]" onSubmit={addUser}>
                 <div className="space-y-1">
                   <Label htmlFor="new-user">Username</Label>
                   <Input
@@ -277,6 +295,18 @@ export function AdminPanel() {
                     required
                     value={newUsername}
                     onChange={(event) => setNewUsername(event.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label htmlFor="new-user-password">Password</Label>
+                  <Input
+                    id="new-user-password"
+                    placeholder="Simple password"
+                    required
+                    type="password"
+                    value={newUserPassword}
+                    onChange={(event) => setNewUserPassword(event.target.value)}
                   />
                 </div>
 
@@ -328,6 +358,9 @@ export function AdminPanel() {
                           <div className="flex justify-end gap-2">
                             <Button size="sm" variant="outline" onClick={() => void toggleUserRole(user)}>
                               Make {user.role === "admin" ? "User" : "Admin"}
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={() => void setUserPassword(user)}>
+                              Set Password
                             </Button>
                             <Button size="sm" variant="destructive" onClick={() => void deleteUser(user.id)}>
                               Delete

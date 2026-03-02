@@ -4,6 +4,7 @@ create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   username text unique not null,
   role text not null default 'user' check (role in ('admin', 'user')),
+  password_hash text,
   salary_amount numeric(12,2) not null default 0,
   salary_currency text not null default 'HNL' check (salary_currency in ('HNL', 'USD')),
   created_at timestamptz not null default now()

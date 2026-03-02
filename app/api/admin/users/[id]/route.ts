@@ -1,28 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/api-auth";
+import { hashPassword } from "@/lib/password";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { roleSchema } from "@/lib/validators";
+import { adminUserUpdateSchema } from "@/lib/validators";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const authResult = await requireAdmin(req);
   if (!authResult.ok) return authResult.response;
 
   const body = await req.json();
-  const parsed = roleSchema.safeParse(body);
+  const parsed = adminUserUpdateSchema.safeParse(body);
 
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid role" }, { status: 400 });
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid update payload" }, { status: 400 });
   }
 
-  if (authResult.session.userId === params.id && parsed.data.role !== "admin") {
+  if (parsed.data.role && authResult.session.userId === params.id && parsed.data.role !== "admin") {
     return NextResponse.json({ error: "Cannot remove your own admin access" }, { status: 400 });
+  }
+
+  const updateData: { role?: "admin" | "user"; password_hash?: string } = {};
+  if (parsed.data.role) {
+    updateData.role = parsed.data.role;
+  }
+  if (parsed.data.password) {
+    updateData.password_hash = hashPassword(parsed.data.password);
   }
 
   const supabase = getSupabaseServerClient();
   const { data, error } = await supabase
     .from("users")
-    .update({ role: parsed.data.role })
+    .update(updateData)
     .eq("id", params.id)
     .select("id, username, role, salary_amount, salary_currency, created_at")
     .single();

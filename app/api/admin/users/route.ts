@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { requireAdmin } from "@/lib/api-auth";
+import { hashPassword } from "@/lib/password";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { userSchema } from "@/lib/validators";
 
@@ -37,7 +38,8 @@ export async function POST(req: NextRequest) {
     .from("users")
     .insert({
       username: parsed.data.username,
-      role: parsed.data.role
+      role: parsed.data.role,
+      password_hash: hashPassword(parsed.data.password)
     })
     .select("id, username, role, salary_amount, salary_currency, created_at")
     .single();

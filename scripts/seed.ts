@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { loadEnvConfig } from "@next/env";
+import { hashPassword } from "../lib/password";
 import type { Database } from "../lib/supabase/database.types";
 
 const DEFAULT_CATEGORIES = [
@@ -19,6 +20,7 @@ async function run() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const adminUsername = process.env.SEED_ADMIN_USERNAME || "admin";
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD || "admin";
 
   if (!supabaseUrl || !serviceRole) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
@@ -31,7 +33,8 @@ async function run() {
   const { error: adminError } = await supabase.from("users").upsert(
     {
       username: adminUsername,
-      role: "admin"
+      role: "admin",
+      password_hash: hashPassword(adminPassword)
     },
     { onConflict: "username" }
   );

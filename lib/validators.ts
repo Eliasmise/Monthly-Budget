@@ -7,6 +7,16 @@ export const usernameSchema = z
   .max(50, "Username is too long")
   .regex(/^[a-zA-Z0-9_.-]+$/, "Username can only contain letters, numbers, _, -, .");
 
+export const passwordSchema = z
+  .string()
+  .min(1, "Password is required")
+  .max(128, "Password is too long");
+
+export const loginSchema = z.object({
+  username: usernameSchema,
+  password: passwordSchema
+});
+
 export const createExpenseSchema = z.object({
   description: z.string().trim().min(1, "Description is required").max(180),
   categoryId: z.string().uuid("Invalid category"),
@@ -25,11 +35,26 @@ export const categorySchema = z.object({
 
 export const userSchema = z.object({
   username: usernameSchema,
-  role: z.enum(["admin", "user"]).default("user")
+  role: z.enum(["admin", "user"]).default("user"),
+  password: passwordSchema
 });
 
 export const roleSchema = z.object({
   role: z.enum(["admin", "user"])
+});
+
+export const adminUserUpdateSchema = z
+  .object({
+    role: z.enum(["admin", "user"]).optional(),
+    password: passwordSchema.optional()
+  })
+  .refine((value) => value.role !== undefined || value.password !== undefined, {
+    message: "At least role or password must be provided"
+  });
+
+export const changePasswordSchema = z.object({
+  currentPassword: passwordSchema,
+  newPassword: passwordSchema
 });
 
 export const budgetAllocationSchema = z.object({

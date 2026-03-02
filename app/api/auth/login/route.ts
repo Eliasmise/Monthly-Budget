@@ -1,24 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { verifyPassword } from "@/lib/password";
 import { getSessionCookieConfig, createSessionToken } from "@/lib/session";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
-import { usernameSchema } from "@/lib/validators";
+import { loginSchema } from "@/lib/validators";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const parseResult = usernameSchema.safeParse(body.username);
+    const parseResult = loginSchema.safeParse(body);
 
     if (!parseResult.success) {
-      return NextResponse.json({ error: parseResult.error.issues[0]?.message ?? "Invalid username" }, { status: 400 });
+      return NextResponse.json({ error: parseResult.error.issues[0]?.message ?? "Invalid credentials" }, { status: 400 });
     }
 
-    const username = parseResult.data;
+    const { username, password } = parseResult.data;
     const supabase = getSupabaseServerClient();
 
     const { data: user, error } = await supabase
       .from("users")
-      .select("id, username, role")
+      .select("id, username, role, password_hash")
       .eq("username", username)
       .maybeSingle();
 
@@ -26,8 +27,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 401 });
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const secret = process.env.APP_SESSION_SECRET;

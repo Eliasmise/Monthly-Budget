@@ -1,7 +1,7 @@
 # Expense Logger (Next.js + Supabase)
 
 Production-ready expense logging app with:
-- Username-only login
+- Username + password login
 - Expense entry/review/analytics tabs
 - Admin management of users, categories, and per-user budget allocations
 - Supabase as the only persistence layer
@@ -26,6 +26,7 @@ Production-ready expense logging app with:
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `APP_SESSION_SECRET`
    - `SEED_ADMIN_USERNAME` (optional, default `admin`)
+   - `SEED_ADMIN_PASSWORD` (optional, default `admin`)
 
 ## 2) Supabase schema + seed
 Run SQL from:
@@ -37,10 +38,15 @@ If you previously used the Sheets version, also run:
 For per-user salary/category budgeting, run:
 - `/supabase/migrations/20260301195000_add_user_budgeting.sql`
 
+For password support, run:
+- `/supabase/migrations/20260302103000_add_user_passwords.sql`
+
 Then run seed script (ensures admin username comes from env):
 ```bash
 npm run seed
 ```
+
+Running seed also sets/updates the admin password using `SEED_ADMIN_PASSWORD`.
 
 ## 3) Local development
 ```bash
@@ -55,8 +61,8 @@ Open [http://localhost:3000](http://localhost:3000).
 4. Deploy.
 
 ## Auth/session model
-- Login endpoint: `POST /api/auth/login` with `{ username }`
-- Lookup in `users` table.
+- Login endpoint: `POST /api/auth/login` with `{ username, password }`
+- Lookup in `users` table and password hash verification.
 - On success, sets signed httpOnly cookie storing:
   - `userId`
   - `username`
@@ -72,6 +78,7 @@ Open [http://localhost:3000](http://localhost:3000).
 API routes:
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
+- `POST /api/auth/change-password`
 - `GET, POST /api/expenses`
 - `PATCH, DELETE /api/expenses/:id`
 - `GET, POST /api/categories`
@@ -86,3 +93,4 @@ API routes:
 - Users can only modify their own expenses; admins can access all users' expenses.
 - Categories are dynamic from the database.
 - Users can see remaining budget per category in Review based on admin-configured salary and percentages.
+- Admin creates users with simple passwords and can reset user passwords.

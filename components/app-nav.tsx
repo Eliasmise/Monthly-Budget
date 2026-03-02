@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { ChangePasswordDialog } from "@/components/change-password-dialog";
 import { LogoutButton } from "@/components/logout-button";
 
 interface AppNavProps {
@@ -26,6 +27,7 @@ export function AppNav({ username, role }: AppNavProps) {
           <div className="text-sm text-muted-foreground">
             Logged in as <span className="font-semibold text-foreground">{username}</span>
           </div>
+          <ChangePasswordDialog />
           <LogoutButton />
         </div>
       </div>

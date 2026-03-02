@@ -8,6 +8,7 @@ export interface Database {
           id: string;
           username: string;
           role: "admin" | "user";
+          password_hash: string | null;
           salary_amount: number;
           salary_currency: "HNL" | "USD";
           created_at: string;
@@ -16,6 +17,7 @@ export interface Database {
           id?: string;
           username: string;
           role?: "admin" | "user";
+          password_hash?: string | null;
           salary_amount?: number;
           salary_currency?: "HNL" | "USD";
           created_at?: string;
@@ -24,6 +26,7 @@ export interface Database {
           id?: string;
           username?: string;
           role?: "admin" | "user";
+          password_hash?: string | null;
           salary_amount?: number;
           salary_currency?: "HNL" | "USD";
           created_at?: string;
